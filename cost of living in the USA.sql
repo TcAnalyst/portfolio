@@ -28,6 +28,12 @@ select * from cost_of_living_us;
 
 -- DATA CLEANING -------------------------------------
 
+-- checking for duplicate rows ---
+SELECT case_id,state_code,county,housing_cost,food_cost,transportation_cost,healthcare_cost,other_cost,childcare_cost,taxes,total_cost, COUNT(*)
+FROM cost_of_living_us
+group by case_id,state_code,county,housing_cost,food_cost,transportation_cost,healthcare_cost,other_cost,childcare_cost,taxes,total_cost
+HAVING COUNT(*) > 1;
+
 -- to change the name of the column state to state code-
 alter table cost_of_living_us
 change column states states text;
