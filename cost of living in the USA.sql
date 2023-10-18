@@ -26,7 +26,7 @@ ignore 1 rows;
 
 select * from cost_of_living_us;
 
--- DATA CLEANING -------------------------------------
+-- DATA CLEANING --------------------
 
 -- checking for duplicate rows ---
 SELECT case_id,state_code,county,housing_cost,food_cost,transportation_cost,healthcare_cost,other_cost,childcare_cost,taxes,total_cost, COUNT(*)
@@ -70,57 +70,69 @@ drop column family_member;
 
 -- DATA EXPLORATIONG ----------
 
--- number of samples 
-select count(case_id)
+-- how many counties are in the sample? 
+select count(distinct county)
 from cost_of_living_us;
 
--- counties that are metro city
+-- what counties are metro city?
 select distinct county as MetroCityCounties, state
 from cost_of_living_us
 where ismetro='true'
 order by state asc;
 
-select count(distinct county) isMetroCounty_Count
+select count(distinct county) MetroCityCounties_Count
 from cost_of_living_us
 where ismetro='true';
 
--- lowest cost of housing in every county
-select  state, county, max(housing_cost)
+-- what are the top 5 counties with the highest average income?
+select distinct county, state , max(median_family_income) AvgIncome
 from cost_of_living_us
-group by state, county, housing_cost
-order by housing_cost asc;
+group by county, state
+order by AvgIncome desc
+limit 5;
 
--- lowest cost of feeding in every county
-select  state, county, max(food_cost)
+-- what are the top 5 counties with least cost of housing?
+select  distinct county,state, min(housing_cost) as HousingCost
 from cost_of_living_us
-group by state, county, food_cost
-order by food_cost asc;
+group by county,state
+order by HousingCost asc
+limit 5;
 
--- lowest cost of transportation in every county
-select  state, county, max(transportation_cost)
+-- what are the top 5 counties with least cost of feeding?
+select  distinct county,state, min(food_cost) as FeedingCost
 from cost_of_living_us
-group by state, county, transportation_cost
-order by transportation_cost asc;
+group by county,state
+order by FeedingCost asc
+limit 5;
 
--- lowest cost of health care in every county
-select  state, county, max(healthcare_cost)
+-- what are the top 5 counties with least cost of transportation?
+select  distinct county, state, min(transportation_cost) as TransportationCost
 from cost_of_living_us
-group by state, county, healthcare_cost
-order by healthcare_cost asc;
+group by county, state
+order by TransportationCost asc
+limit 5;
 
--- lowest taxes in every county
-select  state, county, max(taxes)
+-- what are the top 5 counties with least cost of healthcare?
+select  distinct county,state, min(healthcare_cost) as HealthCareCost
 from cost_of_living_us
-group by state, county, taxes
-order by taxes asc;
+group by county, state
+order by HealthCareCost asc
+limit 5;
 
--- number of individuals(parents and children) accounted for in each state
+-- what are the top 5 counties with the lowest taxes?
+select  distinct county,state, min(taxes) as Taxes
+from cost_of_living_us
+group by county, state
+order by taxes asc
+limit 5;
+
+-- what is the number of individuals(parents and children) accounted for,by state?
 select state ,sum(no_of_parents) as TotalNumberOfParents,sum(no_of_children) as TotalNumberOfChildren , sum(no_of_children + no_of_parents) Total
 from cost_of_living_us
 group by state
 order by 3 desc;
 
--- total number of individual in the survey
+-- what is the total number of individual in the survey?
 select sum(Total) TotalIndividual
 from (select state ,sum(no_of_parents) as TotalNumberOfParents,sum(no_of_children) as TotalNumberOfChildren , sum(no_of_children + no_of_parents) Total
 from cost_of_living_us
@@ -131,14 +143,14 @@ select county, median_family_income, total_cost, (median_family_income - total_c
 from cost_of_living_us
 group by county, median_family_income, total_cost;
 
--- number of families spending more than the avg income
+-- what is the number of families spending more than the avg income?
 select count(AfterExpenses) OverSpendingFamilies
 from (select county, median_family_income, total_cost, (median_family_income - total_cost) AfterExpenses, (total_cost/median_family_income)*100 as ExpensesPercent
 from cost_of_living_us
 group by county, median_family_income, total_cost) ms
 where total_cost > median_family_income;
 
--- counties affordable for a family of 4 0r more
+-- what counties are affordable for a family of 4 0r more?
 SELECT distinct county, state
 FROM cost_of_living_us
 where (no_of_children + no_of_parents)>=4 and total_cost < median_family_income;
@@ -147,12 +159,12 @@ SELECT count(distinct county)
 FROM cost_of_living_us
 where (no_of_children + no_of_parents)>4 and total_cost < median_family_income;
 
--- counties recommended for families with over 2 children
+-- what counties are recommended for families with over 2 children?
 select county, total_cost, median_family_income
 FROM cost_of_living_us
 where no_of_children>=3 and total_cost < median_family_income;
 
--- counties recommended for families of all sizes
-select distinct county
+-- what counties are recommended for families of all sizes?
+select county
 FROM cost_of_living_us
 where total_cost < median_family_income and (no_of_children + no_of_parents)=6;
