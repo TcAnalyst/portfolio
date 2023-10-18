@@ -164,7 +164,19 @@ select county, total_cost, median_family_income
 FROM cost_of_living_us
 where no_of_children>=3 and total_cost < median_family_income;
 
--- what counties are recommended for families of all sizes?
+-- what counties are recommended for families of upto 6?
 select county
 FROM cost_of_living_us
 where total_cost < median_family_income and (no_of_children + no_of_parents)=6;
+
+-- what counties are most recommended for families of upto 6 and intends to save 10% or more of their income?
+select distinct county, median_family_income, total_cost, median_family_income-total_cost as savings, 0.1*median_family_income 10_PercentOfIncome
+FROM cost_of_living_us
+where  median_family_income-total_cost >= 0.1*median_family_income and (no_of_children + no_of_parents)=6
+order by 10_PercentOfIncome desc;
+
+-- what counties are most recommended for families of upto 6 and intends to save 20% or more of their income?
+select distinct county, median_family_income, total_cost, median_family_income-total_cost as savings, 0.2*median_family_income 20_PercentOfIncome
+FROM cost_of_living_us
+where  median_family_income-total_cost >= 0.2*median_family_income and (no_of_children + no_of_parents)=6
+order by 20_PercentOfIncome desc;
