@@ -71,65 +71,72 @@ drop column family_member;
 -- DATA EXPLORATIONG ----------
 
 -- how many counties are in the sample? 
-select count(distinct county)
+select count(distinct concat(county,' ',state_code) )
 from cost_of_living_us;
 
 -- what counties are metro city?
-select distinct county as MetroCityCounties, state
+select distinct concat(county,' ',state_code) as MetroCityCounties, state
 from cost_of_living_us
 where ismetro='true'
 order by state asc;
 
-select count(distinct county) MetroCityCounties_Count
+select count(distinct concat(county,' ',state_code) ) MetroCityCounties_Count
 from cost_of_living_us
 where ismetro='true';
 
 -- what are the top 5 counties with the highest average income?
-select distinct county, state , max(median_family_income) AvgIncome
+select distinct concat(county,' ',state_code) counties, state , max(median_family_income) HighestAvgIncome
 from cost_of_living_us
-group by county, state
-order by AvgIncome desc
+group by counties, state
+order by HighestAvgIncome desc
 limit 5;
 
 -- what are the top 5 most expensive counties?
-select distinct county, state , max(total_cost) TotalCost
+select distinct concat(county,' ',state_code) counties, state , max(total_cost) TotalCost
 from cost_of_living_us
-group by county, state
+group by counties, state
 order by TotalCost desc
 limit 5;
 
--- what are the top 5 counties with least cost of housing?
-select  distinct county,state, min(housing_cost) as HousingCost
+-- what are the top 5 least expensive counties?
+select distinct concat(county,' ',state_code) counties, state , min(total_cost) TotalCost
 from cost_of_living_us
-group by county,state
+group by counties, state
+order by TotalCost asc
+limit 5;
+
+-- what are the top 5 counties with least cost of housing?
+select distinct concat(county,' ',state_code) counties,state, min(housing_cost) as HousingCost
+from cost_of_living_us
+group by counties,state
 order by HousingCost asc
 limit 5;
 
 -- what are the top 5 counties with least cost of feeding?
-select  distinct county,state, min(food_cost) as FeedingCost
+select distinct concat(county,' ',state_code) counties,state, min(food_cost) as FeedingCost
 from cost_of_living_us
-group by county,state
+group by counties,state
 order by FeedingCost asc
 limit 5;
 
 -- what are the top 5 counties with least cost of transportation?
-select  distinct county, state, min(transportation_cost) as TransportationCost
+select distinct concat(county,' ',state_code) counties, state, min(transportation_cost) as TransportationCost
 from cost_of_living_us
-group by county, state
+group by counties, state
 order by TransportationCost asc
 limit 5;
 
 -- what are the top 5 counties with least cost of healthcare?
-select  distinct county,state, min(healthcare_cost) as HealthCareCost
+select distinct concat(county,' ',state_code) counties,state, min(healthcare_cost) as HealthCareCost
 from cost_of_living_us
-group by county, state
+group by counties, state
 order by HealthCareCost asc
 limit 5;
 
 -- what are the top 5 counties with the lowest taxes?
-select  distinct county,state, min(taxes) as Taxes
+select distinct concat(county,' ',state_code) counties ,state, min(taxes) as Taxes
 from cost_of_living_us
-group by county, state
+group by counties, state
 order by taxes asc
 limit 5;
 
@@ -150,7 +157,38 @@ select county, median_family_income, total_cost, (median_family_income - total_c
 from cost_of_living_us
 group by county, median_family_income, total_cost;
 
--- what is the number of families spending more than the avg income?
+-- what counties spend 70% or below of their income?
+select distinct concat(county,' ',state_code) counties, sum(total_cost) CostOfLiving, sum(median_family_income) TotalFamiliesIncome, sum(total_cost)/sum(median_family_income)*100 PercentExpenses
+from cost_of_living_us
+where (total_cost)/(median_family_income)*100  <= 70
+group by counties
+order by TotalFamiliesIncome desc;
+
+select count(counties)
+from
+(select distinct concat(county,' ',state_code) counties, sum(total_cost) CostOfLiving, sum(median_family_income) TotalFamiliesIncome, sum(total_cost)/sum(median_family_income)*100 PercentExpenses
+from cost_of_living_us
+where (total_cost)/(median_family_income)*100  <= 70
+group by counties
+order by TotalFamiliesIncome desc) Above70Percent;
+
+
+-- what counties spend above their income?
+select distinct concat(county,' ',state_code) counties, sum(total_cost) CostOfLiving, sum(median_family_income) TotalFamiliesIncome, sum(total_cost)/sum(median_family_income)*100 PercentExpenses
+from cost_of_living_us
+where (total_cost)/(median_family_income)*100  >=100
+group by counties
+order by TotalFamiliesIncome desc;
+
+select count(counties)
+from
+(select distinct concat(county,' ',state_code) counties, sum(total_cost) CostOfLiving, sum(median_family_income) TotalFamiliesIncome, sum(total_cost)/sum(median_family_income)*100 PercentExpenses
+from cost_of_living_us
+where (total_cost)/(median_family_income)*100  >= 100
+group by counties
+order by TotalFamiliesIncome desc) Above70Percent;
+
+-- what is the number of families spending more than their avg income?
 select count(AfterExpenses) OverSpendingFamilies
 from (select county, median_family_income, total_cost, (median_family_income - total_cost) AfterExpenses, (total_cost/median_family_income)*100 as ExpensesPercent
 from cost_of_living_us
@@ -164,11 +202,11 @@ from cost_of_living_us
 where median_family_income < (no_of_children+no_of_parents)*14580 ;
 
 -- what counties are affordable for a family of 4 0r more?
-SELECT distinct county, state
+SELECT distinct concat(county,' ',state_code) counties, state
 FROM cost_of_living_us
 where (no_of_children + no_of_parents)>=4 and total_cost < median_family_income;
 
-SELECT count(distinct county)
+SELECT count(distinct concat(county,' ',state_code) )
 FROM cost_of_living_us
 where (no_of_children + no_of_parents)>4 and total_cost < median_family_income;
 
@@ -183,7 +221,7 @@ FROM cost_of_living_us
 where total_cost < median_family_income and (no_of_children + no_of_parents)=6;
 
 -- what counties are most recommended for families of upto 6 and intends to save 10% or more of their income?
-select distinct county, median_family_income, total_cost, median_family_income-total_cost as savings, 0.1*median_family_income 10_PercentOfIncome
+select county, median_family_income, total_cost, median_family_income-total_cost as savings, 0.1*median_family_income 10_PercentOfIncome
 FROM cost_of_living_us
 where  median_family_income-total_cost >= 0.1*median_family_income and (no_of_children + no_of_parents)=6
 order by 10_PercentOfIncome desc;
