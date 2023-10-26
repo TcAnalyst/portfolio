@@ -1,27 +1,3 @@
-MIT License
-
-Copyright (c) 2023 TcAnalyst
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-  
-
-
 -- creating the table to receive dataset
 create table cost_of_living_us
 (case_id int,
@@ -115,6 +91,13 @@ group by county, state
 order by AvgIncome desc
 limit 5;
 
+-- what are the top 5 most expensive counties?
+select distinct county, state , max(total_cost) TotalCost
+from cost_of_living_us
+group by county, state
+order by TotalCost desc
+limit 5;
+
 -- what are the top 5 counties with least cost of housing?
 select  distinct county,state, min(housing_cost) as HousingCost
 from cost_of_living_us
@@ -173,6 +156,12 @@ from (select county, median_family_income, total_cost, (median_family_income - t
 from cost_of_living_us
 group by county, median_family_income, total_cost) ms
 where total_cost > median_family_income;
+
+-- how many families budget are below the federal poverty line(FPL)?
+-- (The 2023 FPL for a single person residing in the 48 contiguous states or Washington, D.C. is $14,580)
+select  count(case_id)
+from cost_of_living_us
+where median_family_income < (no_of_children+no_of_parents)*14580 ;
 
 -- what counties are affordable for a family of 4 0r more?
 SELECT distinct county, state
