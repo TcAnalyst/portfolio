@@ -36,7 +36,7 @@ HAVING COUNT(*) > 1;
 
 -- to change the name of the column state to state code-
 alter table cost_of_living_us
-change column states states text;
+change column state state_code text;
 
 -- to get all state code in order to create the name of states--
 select distinct state_code from cost_of_living_us;
@@ -67,6 +67,12 @@ no_of_children= substr(family_member,3,1);
 -- deleting the family_member column
 alter table cost_of_living_us
 drop column family_member;
+
+-- to trim the children and parents column
+update cost_of_living_us
+set no_of_children = trim(no_of_children),
+no_of_parents = trim(no_of_parents) ;
+
 
 -- DATA EXPLORATIONG ----------
 
@@ -113,7 +119,7 @@ order by HousingCost asc
 limit 5;
 
 -- what are the top 5 counties with least cost of feeding?
-select distinct concat(county,' ',state_code) counties,state, min(food_cost) as FeedingCost
+select  concat(county,' ',state_code) counties,state, min(food_cost) as FeedingCost
 from cost_of_living_us
 group by counties,state
 order by FeedingCost asc
