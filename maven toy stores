@@ -1,0 +1,159 @@
+-- DATA CLEANING
+-- Cleaning products table
+
+update products
+set Product_Price=replace(Product_Price,'$',''),
+Product_Cost=replace(Product_Cost,'$','');
+
+alter table products
+alter column Product_Cost float,  
+alter column Product_Price float;
+
+update products
+set product_cost= trim(product_cost),
+Product_Price= trim(Product_Price);
+
+select inventory.Product_ID, inventory.Store_ID
+FROM inventory
+GROUP BY 1,2
+HAVING COUNT(*) > 1;
+
+select products.Product_ID, products.product_name
+FROM products
+GROUP BY 1,2
+HAVING COUNT(*) > 1;
+
+select Store_ID, Store_Name
+FROM stores
+GROUP BY 1,2
+HAVING COUNT(*) > 1;
+
+-- DATA EXPLORATION AND ANALYSIS
+-- (1)Which product categories drive the biggest profits? 
+with GeneralProfit as
+(select  Product_Category, Product_Price-Product_Cost Categoryprofits, sales.units, 
+sales.units*(Product_Price-Product_Cost) TotalProfit
+from products
+join sales
+on products.Product_ID=sales.Product_ID)
+select Product_Category, SUM(TotalProfit) Profits
+from GeneralProfit
+group by Product_Category
+order by Profits desc;
+
+-- Is this the same across store locations?
+WITH GeneralProfit AS (
+    SELECT
+        stores.Store_Location,
+        products.Product_Category,
+        SUM((products.Product_Price - products.Product_Cost) * sales.Units) AS TotalProfit
+    FROM
+        sales
+    JOIN stores ON sales.Store_ID = stores.Store_ID
+    JOIN products ON sales.Product_ID = products.Product_ID
+    GROUP BY
+        stores.Store_Location,
+        products.Product_Category
+),
+RankedItems AS (
+    SELECT
+        Store_Location,
+        Product_Category,
+        TotalProfit,
+        ROW_NUMBER() OVER (PARTITION BY Store_Location ORDER BY TotalProfit DESC) AS RN
+    FROM
+        GeneralProfit
+)
+SELECT
+    Store_Location,
+    Product_Category,
+    TotalProfit
+FROM
+    RankedItems
+WHERE
+    RN = 1;
+
+
+-- (2)What are the top 5 products that drive the biggest profits? 
+WITH GeneralProfit AS (
+    SELECT
+        products.Product_Name,
+        products.Product_Category,
+        SUM(sales.Units * (products.Product_Price - products.Product_Cost)) AS TotalProfit
+    FROM
+        products
+    JOIN sales ON products.Product_ID = sales.Product_ID
+    GROUP BY
+        products.Product_Name,
+        products.Product_Category)
+SELECT TOP 5
+    Product_Name,
+    Product_Category,
+    TotalProfit
+FROM
+    GeneralProfit
+ORDER BY
+    TotalProfit DESC;
+
+
+-- (3)What are the top 5 most sold products? 
+select TOP 5  Product_Name, Product_Category, sum(sales.units) TotalSaleCount
+from products
+join sales
+on products.Product_ID=sales.Product_ID
+group by Product_Name,Product_Category
+order by TotalSaleCount desc;
+
+
+-- (4)Which store_location drive the biggest profits? 
+with GeneralProfit as
+(select   stores.Store_ID,stores.Store_Name, stores.Store_Location, products.Product_Category, sales.Units,
+ products.Product_Price-products.Product_Cost Categoryprofits, 
+ (products.Product_Price-products.Product_Cost)*sales.Units TotalProfit
+from sales
+join stores on sales.Store_ID = stores.Store_ID
+join products on sales.Product_ID=products.Product_ID)
+select store_location, SUM(TotalProfit) Profits
+from GeneralProfit
+group by store_location
+order by Profits desc;
+
+-- (5)Which stores drive the biggest profits (top 5 )? 
+with GeneralProfit as(
+	select   stores.Store_Name, stores.Store_City, stores.Store_Location, products.Product_Category, sales.Units,
+		products.Product_Price-products.Product_Cost Categoryprofits, 
+		(products.Product_Price-products.Product_Cost)*sales.Units TotalProfit
+	from sales
+		join stores on sales.Store_ID = stores.Store_ID
+		join products on sales.Product_ID=products.Product_ID)
+	select top 5 Store_Name, Store_City City , SUM(TotalProfit) Profits
+	from GeneralProfit
+		group by Store_Name,Store_City
+		order by Profits desc;
+
+-- (6)Are sales being lost with out-of-stock products at certain locations?
+select stores.Store_Location,stores.Store_Name, Stock_On_Hand, products.Product_Category
+from inventory
+left join stores on stores.Store_ID=inventory.Store_ID
+left join products on products.Product_ID=inventory.Product_ID
+where Stock_On_Hand=0
+order by 4,1;
+
+--  (7)How much money is tied up in inventory at the toy stores? 
+ with MT as (select  Stock_On_Hand , products.Product_Cost , Stock_On_Hand * products.Product_Cost MoneyTiedUp
+from inventory
+left join products on products.Product_ID=inventory.Product_ID
+where Stock_On_Hand>0)
+select sum(MoneyTiedup)
+from MT;
+
+-- How long will it last?
+with TotalUnitSales as (select Date_, sum(units) units
+from sales
+group by Date_)
+select avg(units) AverageSalePerDay
+from TotalUnitSales; -- average sales made per day
+
+-- total stock on hand
+select sum(stock_on_hand)
+from inventory; -- dividing the total stock on hand by average sales made per day, we can solve that
