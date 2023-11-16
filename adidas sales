@@ -1,0 +1,166 @@
+
+select * from Addidas;
+
+--changing the invoice_date column to date type
+alter table addidas
+alter column invoice_date date;
+
+--checking for duplicate rows
+select *
+from addidas
+group by retailer, retailer_id,invoice_date, region,state,city,product,price_per_unit,
+		units_sold,total_sales,operating_profit,operating_margin,sales_method
+having count(*) > 1;
+
+
+-----SALES-------
+
+
+-- who are the retailers?
+select distinct retailer
+from addidas;
+
+-- what products are sold and how many are they?
+select distinct product
+from addidas;
+
+select count(distinct product) ProductCount
+from addidas;
+
+-- the most expensive product?
+select product,max(price_per_unit) price
+from addidas
+group by product
+order by price desc;
+
+-- best selling product
+select product,sum(units_sold) UnitsSold
+from addidas
+group by product
+order by UnitsSold desc;
+
+-- is it the same for all retailers?
+with HighestSales as 
+	(select retailer, product, sum(total_sales) sales
+from addidas
+group by retailer, product),
+RankedRetailer as 
+	(select retailer, product,sales,row_number() over (partition BY retailer order BY sales desc) as RN
+	from HighestSales)
+select retailer,product,sales
+	from RankedRetailer
+	where RN=1;
+
+-- what was the total sales for each year
+with YearlySales as 
+	(select year(invoice_date) as year, sum(Total_Sales) TotalSales
+	from addidas
+	group by invoice_date)
+select year,sum(TotalSales) YearlySales
+	from YearlySales
+	group by year
+	order by 2 desc;
+
+
+	------PROFIT-------
+
+
+--total profit generated
+select sum(operating_profit)
+from addidas;
+
+-- most profitable product
+ with ProductProfit as (select product,sum(operating_profit) profit
+from addidas
+group by product
+)
+select product, profit, profit / SUM(profit) OVER () * 100 AS profitPercentage
+from ProductProfit
+group by product, profit
+order by 2 desc;
+
+-- what is the profit spread across different sales method?
+with methodprofit as (select sales_method,sum(operating_profit) profit
+from addidas
+group by sales_method)
+select sales_method, profit, profit/sum(profit) over()*100 ProfitPercentage
+from methodprofit
+group by sales_method, profit
+order by 2 desc;
+
+-- Is the in-store purchase the most profitable method for all retailers?
+with GeneralProfit as 
+	(select retailer, Sales_Method, sum(operating_profit) Profit
+from addidas
+group by retailer, Sales_Method),
+RankedRetailer as 
+	(select retailer, Sales_Method,Profit,ROW_NUMBER() OVER (PARTITION BY retailer ORDER BY Profit DESC) AS RN
+	from GeneralProfit)
+select retailer,Sales_Method,profit
+	from RankedRetailer
+	where RN=1;
+
+-- which cities generate most and least profit?
+select top 5  city,sum(operating_profit) profit
+from addidas
+group by city
+order by profit desc;
+
+select top 5  city,sum(operating_profit) profit
+from addidas
+group by city
+order by profit;
+
+
+-- what are the best performing month in terms of profit generated?
+with monthlyProfit as
+	(select format(invoice_date,'MMMM') AS Month, SUM(operating_profit) profit
+	from Addidas
+	group by invoice_date)
+select month, sum(profit) MonthlyProfit
+	from MonthlyProfit
+	group by month
+	order by 2 desc;
+
+
+	----------FINDINGS-------------
+
+
+-- To check the available sales method for the bottom 5 cities by profit
+SELECT city, sales_method
+FROM 
+(
+    SELECT City,  Sales_Method
+    FROM addidas
+    GROUP BY City, Sales_Method
+) as tt
+where city='omaha' or city='Des Moines' or city='Minneapolis' or city='Fargo' or city='Baltimore'
+ORDER BY city;
+
+--lets add a year_quarterly column into the table
+alter table addidas
+add quarter int;
+
+--lets add the quarter value
+UPDATE Addidas
+SET quarter = datepart(quarter, Invoice_Date);
+
+-- calculating profit by quarter
+select quarter, sum(operating_profit) Quarterlyprofit
+from Addidas
+group by quarter
+order by 2 desc;
+
+-- calculating sales by quarter
+select quarter, sum(total_sales) QuarterlySales
+from Addidas
+group by quarter
+order by 2 desc;
+
+-- calculating sales by men and women category
+SELECT
+  substring(product,1,CHARINDEX(' ', product + ' ') - 1) category,
+   sum(Total_Sales) sales
+   from Addidas
+   group by substring(product,1,CHARINDEX(' ', product + ' ') - 1)
+   order by 2 desc;
